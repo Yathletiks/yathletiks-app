@@ -680,11 +680,15 @@ var sb=null,K={view:"dash",home:"dash",feed:[],prog:{},clients:[],last:{},cur:nu
 function sbc(){if(!sb)sb=window.supabase.createClient(SB_URL,SB_KEY);return sb;}
 function coachLoginView(msg,ok){
   MODE="coach";$bottom.hidden=true;setStatus("");document.body.classList.remove("coach");
-  $main.innerHTML='<div class="center"><div><h1 style="font-size:26px">Espace coach</h1><p class="muted small">Réservé à Yanis.</p></div><form class="card" id="coachform"><div class="field"><label for="c-email">E-mail</label><input type="email" id="c-email" autocomplete="username"></div><div class="field"><label for="c-pass">Mot de passe</label><input type="password" id="c-pass" autocomplete="current-password"></div><button class="btn acc full" type="submit" data-mode="in">Se connecter</button><button class="btn ghost full sm" type="button" data-act="csignup">Première fois : créer mon compte</button><p class="msg '+(ok?"ok":"bad")+'" id="c-msg" role="status">'+esc(msg||"")+'</p></form><button class="btn ghost sm" type="button" data-act="goclient">Espace client</button></div>';
+  $main.innerHTML='<div class="center"><div><h1 style="font-size:26px">Espace coach</h1><p class="muted small">Réservé à Yanis.</p></div><form class="card" id="coachform"><div class="field"><label for="c-email">E-mail</label><input type="email" id="c-email" autocomplete="username"></div><div class="field"><label for="c-pass">Mot de passe</label><input type="password" id="c-pass" autocomplete="current-password"></div><button class="btn acc full" type="submit" data-mode="in">Se connecter</button><button class="btn ghost full sm" type="button" data-act="cforgot">Mot de passe oublié</button><p class="msg '+(ok?"ok":"bad")+'" id="c-msg" role="status">'+esc(msg||"")+'</p></form><button class="btn ghost sm" type="button" data-act="goclient">Espace client</button></div>';
+}
+function newPassView(msg){
+  MODE="coach";$bottom.hidden=true;document.body.classList.remove("coach");
+  $main.innerHTML='<div class="center"><div><h1 style="font-size:26px">Nouveau mot de passe</h1><p class="muted small">Choisis ton nouveau mot de passe pour l\'espace coach.</p></div><form class="card" id="newpassform"><div class="field"><label for="np-1">Nouveau mot de passe (8 caractères minimum)</label><input type="password" id="np-1" autocomplete="new-password"></div><div class="field"><label for="np-2">Le même, une deuxième fois</label><input type="password" id="np-2" autocomplete="new-password"></div><button class="btn acc full" type="submit">Enregistrer</button><p class="msg bad" id="np-msg" role="status">'+esc(msg||"")+'</p></form></div>';
 }
 function bootCoach(){
   MODE="coach";$bottom.hidden=true;
-  sbc().auth.getSession().then(function(r){if(r.data&&r.data.session)coachList();else coachLoginView();}).catch(function(){coachLoginView();});
+  sbc().auth.getSession().then(function(r){var ok=r.data&&r.data.session;if(ok&&K.recover)newPassView();else if(ok)coachList();else coachLoginView(K.recover?"Ce lien n'est plus valable. Redemande un e-mail avec « Mot de passe oublié ».":"");}).catch(function(){coachLoginView();});
 }
 function coachList(){
   K.view=K.home;$main.innerHTML='<div class="center"><p class="muted">Chargement…</p></div>';
@@ -842,6 +846,8 @@ function coachClick(b){
   else if(a==="cpushoff"){b.disabled=true;unsubscribePush().then(function(ep){return ep?sbc().from("push_subs").delete().eq("endpoint",ep):null;}).catch(function(){}).then(function(){PUSH.on=false;PUSH.msg="Notifications désactivées sur cet appareil.";renderCoach(true);});}
   else if(a==="cunlock"){b.disabled=true;var up=+b.dataset.d>0;updClient({unlocked:Math.max(1,K.cur.client.unlocked+(+b.dataset.d))}).then(function(){if(up)coachPush("unlock");renderCoach(true);}).catch(function(){b.disabled=false;});}
   else if(a==="cactive"){b.disabled=true;updClient({active:!K.cur.client.active}).then(function(){renderCoach(true);}).catch(function(){b.disabled=false;});}
+  else if(a==="cforgot"){var fe=document.getElementById("c-email").value.trim(),fm=document.getElementById("c-msg");if(!fe){fm.textContent="Écris d'abord ton e-mail ci-dessus.";fm.className="msg bad";return;}
+    b.disabled=true;sbc().auth.resetPasswordForEmail(fe,{redirectTo:location.origin+location.pathname}).then(function(r){b.disabled=false;if(r.error){fm.textContent=/rate|seconds/i.test(r.error.message)?"Un e-mail vient déjà de partir. Attends une minute avant de redemander.":"Envoi impossible : "+r.error.message;fm.className="msg bad";return;}fm.textContent="E-mail envoyé. Ouvre le lien reçu sur cet appareil pour choisir un nouveau mot de passe.";fm.className="msg ok";});}
   else if(a==="csignup"){var em=document.getElementById("c-email").value.trim(),pw=document.getElementById("c-pass").value,m=document.getElementById("c-msg");
     if(!em||pw.length<8){m.textContent="Entre ton e-mail et un mot de passe d'au moins 8 caractères.";m.className="msg bad";return;}
     b.disabled=true;sbc().auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname+"#coach"}}).then(function(r){b.disabled=false;if(r.error){m.textContent="Création impossible : "+r.error.message;m.className="msg bad";return;}
@@ -886,6 +892,9 @@ document.addEventListener("submit",function(e){
     var f={name:name,brand:g("c-brand"),barcode:(ui.create&&ui.create.barcode)||"",kcal:num(g("c-kcal")),prot:num(g("c-prot")),carb:num(g("c-carb")),fat:num(g("c-fat")),extra:{sug:num(g("c-sug")),sat:num(g("c-sat")),fib:num(g("c-fib")),salt:num(g("c-salt"))}};
     rpc("client_save_custom_food",{p_token:TOKEN,p_food:f}).then(function(fid){f.id=fid;D.foods.push(f);persist();ui.create=null;openItem({name:f.name,brand:f.brand,barcode:f.barcode,kcal:f.kcal,prot:f.prot,carb:f.carb,fat:f.fat,extra:f.extra,src:"mine",id:fid});})
     .catch(function(){m.textContent="Enregistrement impossible. Vérifie ta connexion et réessaie.";});}
+  else if(id==="newpassform"){var p1=document.getElementById("np-1").value,p2=document.getElementById("np-2").value;m=document.getElementById("np-msg");
+    if(p1.length<8){m.textContent="Il faut au moins 8 caractères.";return;}if(p1!==p2){m.textContent="Les deux mots de passe ne sont pas identiques.";return;}
+    var nb=e.target.querySelector("button[type=submit]");nb.disabled=true;sbc().auth.updateUser({password:p1}).then(function(r){if(r.error){nb.disabled=false;m.textContent="Enregistrement impossible : "+r.error.message;return;}K.recover=false;history.replaceState(null,"",location.pathname+"#coach");coachList();});}
   else if(id==="coachform"){var em=document.getElementById("c-email").value.trim(),pw=document.getElementById("c-pass").value;m=document.getElementById("c-msg");
     sbc().auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error){m.textContent=/confirm/i.test(r.error.message)?"Confirme d'abord ton e-mail avec le lien reçu.":"E-mail ou mot de passe incorrect.";m.className="msg bad";}else coachList();});}
   else if(id==="addclient"){var nm=document.getElementById("n-name").value.trim();m=document.getElementById("n-msg");if(!nm){m.textContent="Indique le prénom du client.";return;}
@@ -899,7 +908,8 @@ document.addEventListener("visibilitychange",function(){if(document.visibilitySt
 /* ---------- démarrage ---------- */
 (function boot(){
   var hsh=location.hash||"",m=hsh.match(/c=([0-9a-f]{16,})/i);
-  if(/^#coach/.test(hsh)||/type=signup|access_token=/.test(hsh)){bootCoach();return;}
+  if(/type=recovery/.test(hsh))K.recover=true;
+  if(/^#coach/.test(hsh)||/type=signup|access_token=|error_code=/.test(hsh)){bootCoach();return;}
   var tok=m?m[1].toLowerCase():store.get("ya-token",null);
   if(tok){MODE="client";bootClient(tok);}else showLogin();
 })();
