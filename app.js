@@ -314,8 +314,8 @@ function vAccueil(){
 }
 function exFilled(e){return !!(e&&(e.done||e.h||e.feel||(e.s||[]).some(function(q){return q&&(q.kg||q.r||q.m);})));}
 function sessDone(){var s=sess(ui.sid),L=D.logs[lk(ui.week,ui.sid)],E=(L&&L.data&&L.data.ex)||{},d=0;if(!s)return 0;s.blocks.forEach(function(b){b.items.forEach(function(x){if(exFilled(E[x.id]))d++;});});return d;}
-function doneTxt(d){return d+" noté"+(d>1?"s":"");}
-function progHtml(xi,N){return '<div class="sprog"><div class="row" style="justify-content:space-between"><span>Exercice '+(N?xi+1:0)+' sur '+N+'</span><span class="muted" id="sprog-t">'+doneTxt(sessDone())+'</span></div><div class="bar"><i style="width:'+pct(xi+1,N)+'%"></i></div></div>';}
+var NXT=0;function doneTxt(d){return d+" exercice"+(d>1?"s":"")+" noté"+(d>1?"s":"")+" sur "+NXT;}
+function progHtml(xi,N,NX){NXT=NX;return '<div class="sprog"><div class="row" style="justify-content:space-between"><span>Bloc '+(N?xi+1:0)+' sur '+N+'</span><span class="muted" id="sprog-t">'+doneTxt(sessDone())+'</span></div><div class="bar"><i style="width:'+pct(xi+1,N)+'%"></i></div></div>';}
 function updProg(){var t=document.getElementById("sprog-t");if(t)t.textContent=doneTxt(sessDone());}
 function prefs(){var n=D.client.notif||{};return {on:n.on!==false,reminder:n.reminder!==false,time:/^\d{1,2}:\d{2}$/.test(n.time||"")?n.time:"08:00",tz:(function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Paris";}catch(e){return "Europe/Paris";}})()};}
 function vNotif(){
@@ -365,10 +365,10 @@ function vEx(x,L){
 function vSession(){
   var s=sess(ui.sid);if(!s){ui.view="home";return vHome();}
   var L=cur(),h=backHead("home","Retour à tes séances",(cyc().label||cyc().name)+" · "+s.day,s.title+" · "+s.sub);
-  var IT=[];s.blocks.forEach(function(b){b.items.forEach(function(x){IT.push({b:b,x:x});});});var N=IT.length;
-  if(ui.xi==null||ui.xi<0){ui.xi=0;for(var q=0;q<N;q++){if(!exFilled(L.data.ex[IT[q].x.id])){ui.xi=q;break;}}}
+  var IT=s.blocks,N=IT.length,NX=0;IT.forEach(function(b){NX+=b.items.length;});
+  if(ui.xi==null||ui.xi<0){ui.xi=0;for(var q=0;q<N;q++){if(IT[q].items.some(function(x){return !exFilled(L.data.ex[x.id]);})){ui.xi=q;break;}}}
   if(ui.xi>N-1)ui.xi=Math.max(0,N-1);var xi=ui.xi,last=xi>=N-1;
-  h+=weekSeg()+progHtml(xi,N);
+  h+=weekSeg()+progHtml(xi,N,NX);
   var wopen=weekOpen(ui.week),skipped=L.done&&L.data.skipped;
   if(!wopen)h+='<div class="card dash"><div class="row"><span class="muted">'+LOCK+'</span><div class="grow"><span class="title">Aperçu · semaine '+ui.week+' verrouillée</span><span class="muted small">Tu pourras remplir cette séance quand la semaine '+currentWeek()+' sera terminée.</span></div></div></div>';
   else if(skipped)h+='<div class="card dash"><div class="grow"><span class="title">Séance marquée non faite</span><span class="muted small">Yanis le voit dans son espace.</span></div><button class="btn ghost sm full" type="button" data-act="unskip">Finalement, je la fais</button></div>';
@@ -377,11 +377,13 @@ function vSession(){
   if(cm.length)h+='<div class="card okcard"><span class="eyebrow muted">Commentaire de Yanis</span>'+cm.map(function(m){return '<p style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(m.body)+'</p>';}).join("")+'</div>';
   if(s.warm&&xi===0)h+='<div class="card"><span class="eyebrow muted">Warm up & priming</span><p class="small">'+esc(s.warm)+'</p></div>';
   if(N){var cu=IT[xi],nx=IT[xi+1];
-    h+='<section class="sec"><div class="blockbar"><h2>'+esc(cu.b.name)+'</h2>'+(cu.b.tag?'<span>'+esc(cu.b.tag)+'</span>':'')+'</div>'+vEx(cu.x,L)+'</section>';
-    if(nx)h+='<button class="navrow" type="button" data-act="xnav" data-i="'+(xi+1)+'"><span class="grow"><span class="muted small" style="font-weight:600">Ensuite</span><span class="title">'+esc(nx.x.name)+'</span><span class="muted small">'+esc(nx.b.name)+' · '+esc(nx.x.presc)+'</span></span>'+CHEV+'</button>';
-    if(!last)h+='<button class="btn inv full" type="button" data-act="xnav" data-i="'+(xi+1)+'">Exercice suivant</button>';
+    h+='<section class="sec"><div class="blockbar"><h2>'+esc(cu.name)+'</h2>'+(cu.tag?'<span>'+esc(cu.tag)+'</span>':'')+'</div>';
+    if(cu.items.length>1)h+='<p class="muted small">'+cu.items.length+' exercices dans ce bloc, sur la même page.</p>';
+    cu.items.forEach(function(x){h+=vEx(x,L);});h+='</section>';
+    if(nx)h+='<button class="navrow" type="button" data-act="xnav" data-i="'+(xi+1)+'"><span class="grow"><span class="muted small" style="font-weight:600">Ensuite</span><span class="title">'+esc(nx.name)+'</span><span class="muted small">'+nx.items.map(function(x){return esc(x.name);}).join(" · ")+'</span></span>'+CHEV+'</button>';
+    if(!last)h+='<button class="btn inv full" type="button" data-act="xnav" data-i="'+(xi+1)+'">Bloc suivant</button>';
     else if(wopen&&!skipped)h+='<button class="btn inv full" type="button" data-act="end">'+(L.done?"Modifier mon bilan de fin de séance":"Fin de séance · mon ressenti")+'</button>';
-    if(xi>0)h+='<button class="btn ghost full sm" type="button" data-act="xnav" data-i="'+(xi-1)+'">Exercice précédent</button>';
+    if(xi>0)h+='<button class="btn ghost full sm" type="button" data-act="xnav" data-i="'+(xi-1)+'">Bloc précédent</button>';
   }
   if(wopen&&!skipped&&!L.done)h+='<button class="btn ghost full sm" type="button" data-act="skip">'+(ui.skipAsk===lk(ui.week,ui.sid)?"Confirmer : je n'ai pas fait cette séance":"Je n'ai pas fait cette séance")+'</button>';
   return h;
