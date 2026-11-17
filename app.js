@@ -294,6 +294,7 @@ function vAccueil(){
   if(!S.length)h+=trow(false,"Ton programme arrive bientôt","Yanis est en train de le préparer.");
   else if(t&&!dn(t))h+=trow(false,esc(t.title),esc(C.name)+" · semaine "+w+" · "+nex(t)+" exercices",ob(t,LG(t)?"Reprendre":"Commencer","acc"));
   else if(t){var sk=LG(t).data&&LG(t).data.skipped;h+=trow(!sk,esc(t.title),sk?"Marquée non faite":"Séance faite · bilan envoyé à Yanis",ob(t,"Revoir","ghost"));}
+  else if(nx&&flexDays())h+=trow(false,esc(nx.day)+" · "+esc(nx.title),esc(C.name)+" · semaine "+w+" · "+nex(nx)+" exercices",ob(nx,LG(nx)?"Reprendre":"Commencer","acc"));
   else if(nx)h+=trow(false,"Pas de séance prévue aujourd'hui","Prochaine : "+esc(nx.day)+" · "+esc(nx.title),ob(nx,"Voir","ghost"));
   else h+=trow(true,"Semaine "+w+" terminée","Toutes tes séances de la semaine sont notées.");
   var kg=num((D.body[td]||{}).kg);
@@ -317,6 +318,7 @@ function sessDone(){var s=sess(ui.sid),L=D.logs[lk(ui.week,ui.sid)],E=(L&&L.data
 var NXT=0;function doneTxt(d){return d+" exercice"+(d>1?"s":"")+" noté"+(d>1?"s":"")+" sur "+NXT;}
 function progHtml(xi,N,NX){NXT=NX;return '<div class="sprog"><div class="row" style="justify-content:space-between"><span>Bloc '+(N?xi+1:0)+' sur '+N+'</span><span class="muted" id="sprog-t">'+doneTxt(sessDone())+'</span></div><div class="bar"><i style="width:'+pct(xi+1,N)+'%"></i></div></div>';}
 function updProg(){var t=document.getElementById("sprog-t");if(t)t.textContent=doneTxt(sessDone());}
+function flexDays(){var S=cyc().sessions||[];return S.length>0&&S.every(function(s){return typeof s.dow!=="number";});}
 function prefs(){var n=D.client.notif||{};return {on:n.on!==false,reminder:n.reminder!==false,time:/^\d{1,2}:\d{2}$/.test(n.time||"")?n.time:"08:00",tz:(function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Paris";}catch(e){return "Europe/Paris";}})()};}
 function vNotif(){
   var h='<section class="sec" id="notif"><h3>Notifications</h3>',intro=pushIntro(),p=prefs();
