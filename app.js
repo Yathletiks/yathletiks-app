@@ -250,7 +250,7 @@ function weekSummary(){
 function weekOpen(w){var S=cyc().sessions||[];for(var k=1;k<w;k++)for(var i=0;i<S.length;i++){var L=D.logs[ui.cycle+"-"+k+"-"+S[i].id];if(!(L&&L.done))return false;}return true;}
 function currentWeek(){var n=cyc().nweeks||3;for(var w=n;w>=1;w--)if(weekOpen(w))return w;return 1;}
 var LOCKS='<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
-function weekSeg(){var n=cyc().nweeks||3,h='<div class="seg" role="group" aria-label="Semaine du cycle">';for(var w=1;w<=n;w++)h+='<button type="button" data-act="week" data-w="'+w+'" aria-pressed="'+(ui.week===w)+'"'+(weekOpen(w)?"":' aria-label="Semaine '+w+', verrouillée"')+'>'+(weekOpen(w)?"":LOCKS)+'Semaine '+w+'</button>';return h+'</div>';}
+function weekSeg(){var n=cyc().nweeks||3,h='<div class="seg" role="group" aria-label="Semaine du cycle">';for(var w=1;w<=n;w++)h+='<button type="button" data-act="week" data-w="'+w+'" aria-pressed="'+(ui.week===w)+'"'+(weekOpen(w)?"":' aria-label="Semaine '+w+', verrouillée"')+'>'+(weekOpen(w)?"":LOCKS)+(n>3?'Sem. ':'Semaine ')+w+'</button>';return h+'</div>';}
 function vHome(){
   var C=cyc(),S=C.sessions||[],o=openCycles(),h='<div><h1 style="font-size:24px">Tes séances</h1><p class="muted small">'+esc(D.program.title||"Ton programme")+'</p></div>';
   if(o.length>1){h+='<div class="seg" role="group" aria-label="Cycle">';o.forEach(function(c){h+='<button type="button" data-act="cycle" data-n="'+c.n+'" aria-pressed="'+(c.n===ui.cycle)+'">'+esc(c.name)+'</button>';});h+='</div>';}
